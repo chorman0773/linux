@@ -691,7 +691,7 @@ static int kdb_defcmd2(const char *cmdstr, const char *argv0)
 	}
 	if (!s->usable)
 		return KDB_NOTIMP;
-	s->command = kzalloc((s->count + 1) * sizeof(*(s->command)), GFP_KDB);
+	s->command = kcalloc(s->count + 1, sizeof(*(s->command)), GFP_KDB);
 	if (!s->command) {
 		kdb_printf("Could not allocate new kdb_defcmd table for %s\n",
 			   cmdstr);
@@ -729,8 +729,8 @@ static int kdb_defcmd(int argc, const char **argv)
 		kdb_printf("Command only available during kdb_init()\n");
 		return KDB_NOTIMP;
 	}
-	defcmd_set = kmalloc((defcmd_set_count + 1) * sizeof(*defcmd_set),
-			     GFP_KDB);
+	defcmd_set = kmalloc_array(defcmd_set_count + 1, sizeof(*defcmd_set),
+				   GFP_KDB);
 	if (!defcmd_set)
 		goto fail_defcmd;
 	memcpy(defcmd_set, save_defcmd_set,
@@ -2556,16 +2556,11 @@ static int kdb_summary(int argc, const char **argv)
 	}
 	kdb_printf("%02ld:%02ld\n", val.uptime/(60*60), (val.uptime/60)%60);
 
-	/* lifted from fs/proc/proc_misc.c::loadavg_read_proc() */
-
-#define LOAD_INT(x) ((x) >> FSHIFT)
-#define LOAD_FRAC(x) LOAD_INT(((x) & (FIXED_1-1)) * 100)
 	kdb_printf("load avg   %ld.%02ld %ld.%02ld %ld.%02ld\n",
 		LOAD_INT(val.loads[0]), LOAD_FRAC(val.loads[0]),
 		LOAD_INT(val.loads[1]), LOAD_FRAC(val.loads[1]),
 		LOAD_INT(val.loads[2]), LOAD_FRAC(val.loads[2]));
-#undef LOAD_INT
-#undef LOAD_FRAC
+
 	/* Display in kilobytes */
 #define K(x) ((x) << (PAGE_SHIFT - 10))
 	kdb_printf("\nMemTotal:       %8lu kB\nMemFree:        %8lu kB\n"
@@ -2706,8 +2701,11 @@ int kdb_register_flags(char *cmd,
 	}
 
 	if (i >= kdb_max_commands) {
-		kdbtab_t *new = kmalloc((kdb_max_commands - KDB_BASE_CMD_MAX +
-			 kdb_command_extend) * sizeof(*new), GFP_KDB);
+		kdbtab_t *new = kmalloc_array(kdb_max_commands -
+						KDB_BASE_CMD_MAX +
+						kdb_command_extend,
+					      sizeof(*new),
+					      GFP_KDB);
 		if (!new) {
 			kdb_printf("Could not allocate new kdb_command "
 				   "table\n");
